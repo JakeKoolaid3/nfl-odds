@@ -6,44 +6,45 @@ function fetchUrl(url) {
   return new Promise((resolve, reject) => {
     https.get(url, {
       headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
       },
       timeout: 10000
     }, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
+        if (res.statusCode !== 200) {
+          return reject(new Error(`HTTP ${res.statusCode}`));
+        }
         try {
           resolve(JSON.parse(data));
         } catch (e) {
-          reject(new Error('Parse error'));
+          reject(new Error('Invalid JSON'));
         }
       });
-    }).on('error', reject).on('timeout', () => reject(new Error('Timeout')));
+    }).on('error', reject);
   });
 }
 
 async function main() {
   try {
-    console.log('🏈 Fetching NFL matchups...\n');
+    console.log('🏈 Fetching NFL schedule...\n');
     
-    // Using NFLDATA.com which is more permissive
-    const url = 'https://nfldata.com/api/v1/games?season=2026&season_type=REG';
+    // Using ESPN's public schedule (no auth needed)
+    const url = 'https://www.espn.com/apis/site/v2/sports/football/nfl/schedule';
     const data = await fetchUrl(url);
     
-    if (!Array.isArray(data) || data.length === 0) {
-      console.log('No games found.');
+    if (!data.events || data.events.length === 0) {
+      console.log('No events found.');
       return;
     }
     
-    // Filter for upcoming games (next 7 days)
     const today = new Date();
-    const weekGames = data.filter(game => {
+    const weekGames = data.events.filter(event => {
       try {
-        const gameDate = new Date(game.gameday);
-        const daysAway = (gameDate - today) / (1000 * 60 * 60 * 24);
-        return daysAway >= 0 && daysAway <= 7;
+        const eventDate = new Date(event.date);
+        const daysAway = (eventDate - today) / (1000 * 60 * 60 * 24);
+        return daysAway >= -1 && daysAway <= 7;
       } catch (e) {
         return false;
       }
@@ -54,10 +55,14 @@ async function main() {
       return;
     }
     
-    console.log(`This week's matchups (${weekGames.length} games):\n`);
+    console.log(`📅 This week's NFL matchups:\n`);
     
     weekGames.forEach((game, i) => {
-      const time = new Date(game.gameday).toLocaleString('en-US', {
+      const comp = game.competitions?.[0];
+      const away = comp?.competitors?.find(c => c.homeAway === 'away')?.team?.displayName;
+      const home = comp?.competitors?.find(c => c.homeAway === 'home')?.team?.displayName;
+      
+      const time = new Date(game.date).toLocaleString('en-US', {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
@@ -66,7 +71,7 @@ async function main() {
         timeZone: 'America/Los_Angeles'
       });
       
-      console.log(`${i + 1}. ${game.away_team} @ ${game.home_team}`);
+      console.log(`${i + 1}. ${away} @ ${home}`);
       console.log(`   ${time} PT\n`);
     });
     
