@@ -1,16 +1,16 @@
-   name: NFL Weekly Odds
+name: NFL Weekly Odds
 
-    on:
-     schedule:
-       - cron: '0 7 * * 3'
-     workflow_dispatch:
+on:
+  schedule:
+    - cron: '0 7 * * 3'
+  workflow_dispatch:
 
-   jobs:
-     nfl-odds:
-       runs-on: ubuntu-latest
-       steps:
-         - uses: actions/checkout@v3
-         - uses: actions/setup-node@v3
-           with:
-             node-version: '18'
-         - run: node nfl-odds-weekly.js
+jobs:
+  nfl-odds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: node nfl-odds-weekly.js
