@@ -1,12 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * NFL Weekly Matchups & Odds Fetcher
- * Displays current week's NFL games with betting odds
- * 
- * Usage: node nfl-odds-weekly.js
- */
-
 const https = require('https');
 
 function httpsRequest(url) {
@@ -18,23 +11,22 @@ function httpsRequest(url) {
         try {
           resolve(JSON.parse(data));
         } catch (e) {
-          resolve(data);
+          reject(new Error('Failed to parse response'));
         }
       });
     }).on('error', reject);
   });
 }
 
-async function fetchNFLSchedule() {
+async function main() {
   try {
-    console.log('🏈 Fetching this week\'s NFL matchups...\n');
+    console.log('🏈 Fetching NFL schedule...\n');
     
-    const scheduleUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/schedule';
-    const data = await httpsRequest(scheduleUrl);
+    const data = await httpsRequest('https://site.api.espn.com/apis/site/v2/sports/football/nfl/schedule');
     
-    if (!data.events) {
-      console.log('No games found for this week.');
-      return [];
+    if (!data.events || data.events.length === 0) {
+      console.log('No games found this week.');
+      return;
     }
     
     const today = new Date();
@@ -44,28 +36,29 @@ async function fetchNFLSchedule() {
       return daysUntilGame >= 0 && daysUntilGame <= 7;
     });
     
-    return weekGames;
+    if (weekGames.length === 0) {
+      console.log('No games scheduled this week.');
+      return;
+    }
+    
+    console.log(`📅 ${weekGames.length} games this week:\n`);
+    
+    weekGames.forEach((game, i) => {
+      const comp = game.competitions?.[0];
+      const away = comp?.competitors?.find(c => c.homeAway === 'away')?.team?.displayName || 'TBD';
+      const home = comp?.competitors?.find(c => c.homeAway === 'home')?.team?.displayName || 'TBD';
+      const gameTime = new Date(game.date).toLocaleString('en-US', { 
+        weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles'
+      });
+      
+      console.log(`${i + 1}. ${away} @ ${home}`);
+      console.log(`   ${gameTime} PT\n`);
+    });
+    
   } catch (error) {
-    console.error('Error fetching NFL schedule:', error.message);
-    return [];
+    console.error('Error:', error.message);
+    process.exit(1);
   }
 }
 
-function formatGameTime(dateString) {
-  const date = new Date(dateString);
-  const options = { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' };
-  return date.toLocaleString('en-US', options);
-}
-
-async function main() {
-  const games = await fetchNFLSchedule();
-  
-  if (games.length === 0) {
-    console.log('No NFL games scheduled for this week.');
-    process.exit(0);
-  }
-  
-  console.log(`📅 ${games.length} games this week:\n`);
-  console.log('═'.repeat(80));
-  
-  for (let i = 0; i <
+main();
