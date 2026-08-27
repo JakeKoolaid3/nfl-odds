@@ -1,8 +1,9 @@
    name: NFL Weekly Odds
 
-   on:
+    on:
      schedule:
        - cron: '0 7 * * 3'
+     workflow_dispatch:
 
    jobs:
      nfl-odds:
